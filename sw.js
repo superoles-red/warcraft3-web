@@ -1,13 +1,28 @@
-importScripts('pack.js');
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+importScripts('pack.js', 'shell-release.js');
+const rootURL=new URL(self.registration.scope);
+const cachePrefix='wc3-shell-'+rootURL.pathname+'-';
+const cacheName=cachePrefix+self.WC3_SHELL.revision;
+const staticFiles=new Set(self.WC3_SHELL.files);
+
+self.addEventListener('install', event=>event.waitUntil((async()=>{
+  const cache=await caches.open(cacheName);
+  await cache.addAll([...staticFiles].map(name=>new Request(new URL(name,rootURL),{cache:'reload'})));
+  await self.skipWaiting();
+})()));
+self.addEventListener('activate', event=>event.waitUntil((async()=>{
+  for (const key of await caches.keys()) {
+    if (key.startsWith(cachePrefix) && key!==cacheName) await caches.delete(key);
+  }
+  await self.clients.claim();
+})()));
 let current;
 async function getPackage(id) {
   if (current?.id === id) return current;
   const row = await packStore('readonly', store => store.get('active'));
   if (!row || row.id !== id) return null;
-  const entries = await directory(row.file);
-  current = {...row, entries};
+  const file = await installedArchive(row);
+  const entries = await directory(file);
+  current = {...row, file, entries};
   return current;
 }
 async function serve(request, id, name) {
@@ -41,6 +56,23 @@ async function serve(request, id, name) {
 }
 self.addEventListener('fetch', event => {
   const u = new URL(event.request.url);
+  if (u.origin!==rootURL.origin || !u.pathname.startsWith(rootURL.pathname)) return;
+  const rel=u.pathname.slice(rootURL.pathname.length);
+  const name=rel==='' ? 'index.html' : rel==='engine/' ? 'engine/index.html' : rel;
+  if (name.startsWith('presentation/') && event.request.method==='GET') {
+    event.respondWith((async()=>{
+      const art=await packStore('readonly',store=>store.get('presentation')).catch(()=>null);
+      const blob=art?.[name.slice('presentation/'.length)];
+      if (blob) return new Response(blob,{headers:{'Content-Type':name.endsWith('.ttf')?'font/ttf':name.endsWith('.webp')?'image/webp':'image/png'}});
+      return fetch(event.request);
+    })());return;
+  }
+  if (staticFiles.has(name) && event.request.method==='GET') {
+    event.respondWith((async()=>{
+      const cache=await caches.open(cacheName);
+      return (await cache.match(new URL(name,rootURL))) || fetch(event.request);
+    })());return;
+  }
   const base = new URL('private-pack/', self.registration.scope);
   if (u.origin !== base.origin || !u.pathname.startsWith(base.pathname)) return;
   const path = decodeURIComponent(u.pathname.slice(base.pathname.length));

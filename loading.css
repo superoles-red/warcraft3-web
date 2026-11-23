@@ -1,0 +1,35 @@
+:root { color-scheme: dark }
+html,body { margin:0; background:#080705; color:#f3e8c9 }
+#loading { position:fixed; inset:0; z-index:15; display:grid; place-items:center; overflow:hidden;
+  font: clamp(15px,2.1vmin,20px)/1.35 "Warcraft Loading",Georgia,"Times New Roman",serif; text-align:center; background:#080705 }
+#loading[hidden], [hidden] { display:none!important }
+.loading-panel { position:relative; display:grid; place-items:center; width:min(100%,133.333vh); width:min(100%,133.333dvh); aspect-ratio:4/3; max-height:100% }
+#loading-art { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none }
+#loading-logo { position:absolute; top:10%; left:50%; transform:translateX(-50%); width:44%; height:auto }
+.loading-body { z-index:1; width:min(77%,520px); align-self:end; margin-bottom: 8%;
+  color:#fff0c6; text-shadow:0 1px 3px #090500,1px 0 2px #151000,-1px 0 3px #151000 }
+.loading-body p { margin:0.55em 0 }
+.loading-meter { display:grid; place-items:center; position:relative; width:100%; aspect-ratio:8; margin:auto }
+.loading-meter progress { width:80%; height:.7rem; accent-color:#bca565 }
+.loading-meter.original progress { opacity:0 }
+.loading-frame,.loading-track { position:absolute; pointer-events:none }
+.loading-frame { inset:0; width:100%; height:100% }
+.loading-track { left:7.4%; right:7.4%; top:31%; bottom:31%; overflow:hidden; background:#080a0c }
+.loading-ink { height:100%; width:var(--progress,0%); background-size:auto 100% }
+#chooser { padding: max(20px,4vw); font:16px/1.5 system-ui,sans-serif }
+#chooser input,#chooser a { color:inherit }
+
+#loading.waiting .loading-ink { width:32%; animation:wc3-loading 2.4s ease-in-out infinite alternate }
+@keyframes wc3-loading { from { transform:translateX(0) } to { transform:translateX(211%) } }
+@media (prefers-reduced-motion:reduce) { #loading.waiting .loading-ink { animation:none } }
+
+#chooser.original-controls { font-family:"Warcraft Loading",Georgia,serif }
+#chooser.original-controls :is(#retry,#launch),
+#chooser.original-controls input::file-selector-button {
+  display:inline-grid; place-items:center; box-sizing:border-box;
+  min-width:11em; min-height:2.9em; padding:.65em 1.6em;
+  color:#ffebba; font:inherit; border:0; text-decoration:none; cursor:pointer;
+  background:transparent var(--wc3-button) center/100% 100% no-repeat;
+}
+#chooser.original-controls :is(#retry,#launch):active,
+#chooser.original-controls input:active::file-selector-button { transform:translateY(1px) }

@@ -17,11 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - name: Stage only the browser runtime
-        run: |
-          mkdir -p site/engine site/lib
-          cp lib/fflate-0.8.2.js lib/LICENSE-fflate site/lib/
-          cp index.html app.js pack.js sw.js local-status.json .nojekyll site/
-          cp engine/index.html engine/pack-runtime.js engine/openwarcraft3.js engine/openwarcraft3.wasm engine/openwarcraft3.data engine/wc3-input.js engine/version.json engine/LICENSE engine/LICENSE-OpenRealm engine/NOTICE.md site/engine/
+        run: python3 tools/stage_shell.py --output site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

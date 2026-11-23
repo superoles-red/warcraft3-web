@@ -1,0 +1,1 @@
+{"id":"./","name":"Warcraft III","short_name":"Warcraft III","lang":"ru","start_url":"./","scope":"./","display":"fullscreen","display_override":["fullscreen","standalone"],"background_color":"#080705","theme_color":"#080705","icons":[{"src":"presentation/icon-192.png","sizes":"192x192","type":"image/png"},{"src":"presentation/icon-512.png","sizes":"512x512","type":"image/png"}]}

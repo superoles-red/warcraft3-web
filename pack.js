@@ -59,3 +59,33 @@ async function packStore(mode, action) {
     });
   } finally { db.close(); }
 }
+
+async function inspectPack(file) {
+  const entries = await directory(file);
+  const description = entries.get('warcraft3-pack.json');
+  if (description.size > 64*1024) throw Error('Повреждён манифест игрового пакета.');
+  const manifest = JSON.parse(await (await payload(file, description)).text());
+  if (manifest.format !== 1 || (manifest.startMap && !entries.has('gamedata/' + manifest.startMap))) {
+    throw Error('Пакет несовместим или карта запуска отсутствует.');
+  }
+  const art = {};
+  for (const name of ['background.webp','roc.webp','tft.webp','border.png','fill.png','icon-192.png','icon-512.png','font.ttf','button.webp']) {
+    const entry = entries.get('presentation/' + name);
+    if (entry && entry.size < 4*1024*1024) art[name] = await payload(file, entry);
+  }
+  return {manifest, art};
+}
+
+async function installedArchive(row) {
+  if (row.file) return row.file; // ZIP chosen from the system file picker.
+  if (!Array.isArray(row.chunkKeys) || !row.chunkKeys.length) throw Error('Пакет игры отсутствует.');
+  let requests;
+  await packStore('readonly',store=>{
+    requests=row.chunkKeys.map(k=>store.get(k));
+    return requests[requests.length-1];
+  });
+  const blocks=requests.map(r=>r.result);
+  if (blocks.some(b=>!(b instanceof Blob))) throw Error('Файлы установки неполны. Откройте страницу загрузки.');
+  // Blob concatenation references the on-disk blocks. No second full ZIP is stored.
+  return new Blob(blocks,{type:'application/zip'});
+}

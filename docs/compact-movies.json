@@ -1,0 +1,128 @@
+[
+  {
+    "name": "tutorialop_640.webm",
+    "native_bytes": 22981247,
+    "compact_bytes": 11780585,
+    "frames": 4178,
+    "max_frame_shift_ms": 0,
+    "duration_difference_ms": 0,
+    "audio_sha256": "34281a7a42273cc1bffa68099015b7f3a63756a3d2be572eb0bde195403cada1",
+    "vmaf": {
+      "samples": 88,
+      "mean": 94.801,
+      "fifth_percentile": 84.489
+    }
+  },
+  {
+    "name": "tutorialin_640.webm",
+    "native_bytes": 17898764,
+    "compact_bytes": 11109651,
+    "frames": 3261,
+    "max_frame_shift_ms": 0,
+    "duration_difference_ms": 0,
+    "audio_sha256": "acd851cceb6170503ad8349b06c0f6f5a03c2ec66f51b6d28ed6b09b1ba027a2",
+    "vmaf": {
+      "samples": 68,
+      "mean": 94.75,
+      "fifth_percentile": 86.34
+    }
+  },
+  {
+    "name": "humanop_640.webm",
+    "native_bytes": 28557406,
+    "compact_bytes": 12831944,
+    "frames": 5224,
+    "max_frame_shift_ms": 0,
+    "duration_difference_ms": 0,
+    "audio_sha256": "853f6aeb46e27a00b2858e281a50e4e4600340fb32a475841bd8ddce08ae450a",
+    "vmaf": {
+      "samples": 109,
+      "mean": 95.128,
+      "fifth_percentile": 90.959
+    }
+  },
+  {
+    "name": "humaned_640.webm",
+    "native_bytes": 20429298,
+    "compact_bytes": 11125322,
+    "frames": 3748,
+    "max_frame_shift_ms": 0,
+    "duration_difference_ms": 0,
+    "audio_sha256": "13147af82247c66b004ba9027973bb60cbb5c3aaa307e66b40196255616fdc6b",
+    "vmaf": {
+      "samples": 79,
+      "mean": 95.774,
+      "fifth_percentile": 89.16
+    }
+  },
+  {
+    "name": "undeaded_640.webm",
+    "native_bytes": 16312602,
+    "compact_bytes": 11198465,
+    "frames": 2965,
+    "max_frame_shift_ms": 0,
+    "duration_difference_ms": 0,
+    "audio_sha256": "d59c404dd81b0e88335dcb472053b22208ee24bd52a78b84d222591a70213359",
+    "vmaf": {
+      "samples": 62,
+      "mean": 94.835,
+      "fifth_percentile": 84.721
+    }
+  },
+  {
+    "name": "orced_640.webm",
+    "native_bytes": 30387906,
+    "compact_bytes": 11032487,
+    "frames": 5673,
+    "max_frame_shift_ms": 0,
+    "duration_difference_ms": 0,
+    "audio_sha256": "1fe356be2abe299cccf2a2394933581eb89cddd3808be078447c024adc62c032",
+    "vmaf": {
+      "samples": 119,
+      "mean": 93.419,
+      "fifth_percentile": 87.056
+    }
+  },
+  {
+    "name": "nightelfed_640.webm",
+    "native_bytes": 20233316,
+    "compact_bytes": 10215673,
+    "frames": 3891,
+    "max_frame_shift_ms": 0,
+    "duration_difference_ms": 0,
+    "audio_sha256": "dc52a19f57ba0df056f115ab4a30d8cabc00781b0e80b417bba9bcc528874f4a",
+    "vmaf": {
+      "samples": 82,
+      "mean": 91.363,
+      "fifth_percentile": 83.315
+    }
+  },
+  {
+    "name": "introx_640.webm",
+    "native_bytes": 24606294,
+    "compact_bytes": 5797580,
+    "frames": 4533,
+    "max_frame_shift_ms": 0,
+    "duration_difference_ms": 0,
+    "audio_sha256": "f3c0cf3f6bb5ee9f459e7228592c2370adec5f78ba1db22cbb53e160014611d5",
+    "vmaf": {
+      "samples": 95,
+      "mean": 90.987,
+      "fifth_percentile": 84.59
+    }
+  },
+  {
+    "name": "outrox_640.webm",
+    "native_bytes": 24819468,
+    "compact_bytes": 7736243,
+    "frames": 4481,
+    "max_frame_shift_ms": 0,
+    "duration_difference_ms": 0,
+    "audio_sha256": "b8f4a3fdd8e25ef159b80c97290692a6316be07d94a639be325930437b830350",
+    "vmaf": {
+      "samples": 94,
+      "mean": 93.869,
+      "fifth_percentile": 88.285
+    }
+  }
+]

@@ -1,12 +1,28 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../loading.css">
 <title>Warcraft III</title>
 <style>
-  html, body { margin: 0; background: #000; overflow: hidden; height: 100%; overscroll-behavior: none; }
-  /* The engine adapts to whatever size the canvas is; fill the viewport so
-     portrait phones render edge-to-edge (dvh handles mobile URL-bar chrome). */
-  canvas { display: block; width: 100vw !important; height: 100vh !important; height: 100dvh !important; outline: none; touch-action: none; }
+  html, body { margin: 0; background: #000; overflow: hidden; overscroll-behavior: none; }
+  html {
+    --game-width: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
+    --available-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    --game-height: min(var(--available-height), calc(var(--game-width) * 0.75));
+    height: 100%;
+  }
+  @supports (height: 100dvh) {
+    html { --available-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  }
+  body {
+    height: var(--available-height);
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center;
+  }
+  /* 1.31 has authored widescreen side panels. Below 4:3 the engine squashes its fixed FDF console. */
+  #canvas { display: block; width: var(--game-width) !important; height: var(--game-height) !important;
+            outline: none; touch-action: none; }
   #status { position: fixed; left: 10px; top: 8px; color: #bbb; font: 12px/1.5 monospace;
             text-shadow: 0 0 4px #000; pointer-events: none; }
   #input-status { position: fixed; left: 10px; bottom: 8px; right: 10px; color: #888;
@@ -15,11 +31,59 @@
   #movie { display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 20;
            background: #000; object-fit: contain; }
 </style>
+<script>
+  // Fullscreen requires a trusted gesture. Leave that gesture available to the game's own controls.
+  (() => {
+    const root = document.documentElement;
+    let entered = false, pending = false;
+    function enter(event) {
+      if (!event.isTrusted || pending || document.fullscreenElement || document.webkitFullscreenElement) return;
+      const retry = event.type === 'keydown' && event.key === 'F11';
+      if (entered && !retry) return;
+      if (event.type === 'keydown' && ['Escape', 'Tab', 'Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) return;
+      if (navigator.userActivation && !navigator.userActivation.isActive) return;
+      const request = root.requestFullscreen || root.webkitRequestFullscreen;
+      if (!request || document.fullscreenEnabled === false || matchMedia('(display-mode: fullscreen)').matches) return;
+      if (retry) event.preventDefault();
+      pending = true;
+      try {
+        const result = root.requestFullscreen ? root.requestFullscreen({ navigationUI: 'hide' }) : root.webkitRequestFullscreen();
+        Promise.resolve(result)
+          .then(() => { entered = Boolean(document.fullscreenElement || document.webkitFullscreenElement); })
+          .catch(() => {})
+          .finally(() => { pending = false; });
+      } catch { pending = false; }
+    }
+    document.addEventListener('pointerup', enter, true);
+    document.addEventListener('keydown', enter, true);
+  })();
+</script>
 <script src="../pack.js"></script>
 <script src="../lib/fflate-0.8.2.js"></script>
 <script src="pack-runtime.js"></script>
 <canvas id="canvas" width="1280" height="720" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
-<div id="status">Загрузка Warcraft III…</div>
+<script>
+  // SDL initially allocates a window-sized surface. Ask its own resize handler to adopt the fitted
+  // canvas after allocation and whenever browser chrome or a display cutout changes the CSS box.
+  (() => {
+    const canvas = document.getElementById('canvas');
+    let pending = false;
+    function sync() {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        pending = false;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width && rect.height && Math.abs(canvas.height - canvas.width * rect.height / rect.width) > 1.5) {
+          window.dispatchEvent(new Event('resize'));
+        }
+      });
+    }
+    new ResizeObserver(sync).observe(canvas);
+    new MutationObserver(sync).observe(canvas, { attributes: true, attributeFilter: ['width', 'height'] });
+  })();
+</script>
+<script src="../loading.js"></script>
 <div hidden id="input-status"></div>
 <video id="movie" playsinline preload="none"></video>
 
@@ -27,16 +91,33 @@
   window.__status = 'loading';
   window.__logs = [];
   window.__errors = [];
-  var st = document.getElementById('status');
-  function setStatus(s) { window.__status = s; st.textContent = s; if (s === 'runtime-initialized') st.style.display = 'none'; }
+  function setStatus(s) {
+    window.__status = s;
+    LoadingScreen.set(s === 'runtime-initialized' ? 'Подготовка игрового мира…' : s);
+  }
+  let readyFrame = false;
+  function firstGameFrame(text) {
+    const ready = mapArgs.length ? text.includes('CL_SendBegin:') : text.includes('UI_SetScreen:') || text.includes('OpenWarcraft3 initialized.');
+    if (ready && !readyFrame) {
+      readyFrame = true;
+      requestAnimationFrame(() => requestAnimationFrame(() => LoadingScreen.hide()));
+    }
+    if (text.startsWith("Can't find map ")) setStatus('В выбранном пакете отсутствует эта карта.');
+  }
   window.addEventListener('error', function (e) { window.__errors.push(String(e.message)); });
   const query = new URLSearchParams(location.search);
   const packId = query.get('pack');
   const assetRoot = packId ? '../private-pack/' + encodeURIComponent(packId) + '/' : '';
   const dataRoot = assetRoot + 'gamedata/';
+  if (packId) packStore('readonly',store=>store.get('presentation')).then(art=>{
+    if (art?.['background.webp']) LoadingScreen.art(name=>art[name] && URL.createObjectURL(art[name]));
+  }).catch(()=>{});
+  else LoadingScreen.art(name=>'../presentation/'+name);
   const touchDevice = matchMedia('(pointer: coarse)').matches;
   const directMap = query.get('map') || '';
-  const mapArgs = /^(?:maps|campaign)\/[a-z0-9_()/-]+\.w3[mx]$/i.test(directMap) ? ['+map', directMap] : [];
+  const validMapPath = /^(?:maps|campaign)\/(?:[\p{L}\p{N}_()' -]+\/)*[\p{L}\p{N}_()' -]+\.w3[mx]$/iu;
+  const bonusMapPath = /^demo0[345]\.w3m$/i;
+  const mapArgs = validMapPath.test(directMap) || bonusMapPath.test(directMap) ? ['+map', directMap] : [];
   var Module = {
     canvas: document.getElementById('canvas'),
     ENV: Object.assign({},
@@ -45,11 +126,11 @@
     arguments: ['-data', '/data', '+com_maxfps', touchDevice ? '30' : '60',
       '+scr_showfps', '0', '+vid_fullscreen', '0', '+cl_camera_edge_scroll', '0', '+fs_expansion', query.get('edition') === 'tft' ? '1' : '0'].concat(mapArgs),
     print: function (t) { if (window.__logs.length < 2000) window.__logs.push(String(t)); },
-    printErr: function (t) { if (window.__errors.length < 4000) window.__errors.push(String(t)); },
+    printErr: function (t) { firstGameFrame(String(t)); if (window.__errors.length < 4000) window.__errors.push(String(t)); },
     WC3_DATA_BASE: dataRoot,   // served map-mirror root, relative to this page
     onRuntimeInitialized: function () { setStatus('runtime-initialized'); seedMapCatalog(); },
     locateFile: function (f) { return f + '?v=' + window.__BUILD; },
-    onAbort: function (why) { window.__errors.push('ABORT: ' + why); st.style.display = ''; setStatus('Движок прервал запуск. Вернитесь назад и проверьте игровой пакет.'); },
+    onAbort: function (why) { window.__errors.push('ABORT: ' + why); setStatus('Движок прервал запуск. Вернитесь назад и проверьте игровой пакет.'); },
     wc3PlayMovie: function (path) { if (window.__moviePlay) window.__moviePlay(String(path)); },
   };
   window.Module = Module;
@@ -58,7 +139,7 @@
   // The local copy may omit logo movies. Complete these before showing a video element.
   (function () {
     const video = document.getElementById('movie');
-    let active = 0, sequence = 0;
+    let active = 0, sequence = 0, objectURL;
     function finish(id) {
       if (active !== id || !id) return;
       active = 0;
@@ -68,6 +149,7 @@
       video.removeAttribute('src');
       video.load();
       video.style.display = 'none';
+      if (objectURL) { URL.revokeObjectURL(objectURL); objectURL = null; }
       Module._WC3_MovieDone?.();
     }
     window.addEventListener('keydown', e => { if (e.key === 'Escape') finish(active); });
@@ -76,11 +158,22 @@
       const id = active = ++sequence;
       const base = String(path).split(String.fromCharCode(92)).join('/').split('/').pop()
         .replace(/\.(mpq|avi|mp4|bik)$/i, '').toLowerCase();
-      const url = assetRoot + 'movies/' + encodeURIComponent(base) + '_native.webm';
+      const relative='movies/'+base+'_native.webm';
+      let url=assetRoot+relative;
       try {
-        const response = await fetch(url, {method:'HEAD'});
-        if (active !== id) return;
-        if (!response.ok) return finish(id);
+        if (Module.WC3_ARCHIVE) {
+          const {file,entries}=Module.WC3_ARCHIVE;
+          const entry=entries.get(relative);
+          if (!entry) return finish(id);
+          const blob=await payload(file,entry);
+          if (active!==id) return;
+          url=objectURL=URL.createObjectURL(blob.slice(0,blob.size,'video/webm'));
+        } else {
+          const response = await fetch(url, {method:'HEAD'});
+          if (active !== id) return;
+          if (!response.ok) return finish(id);
+        }
+        LoadingScreen.hide();
         video.onended = video.onerror = () => finish(id);
         video.src = url;
         video.preload = 'metadata';
@@ -117,6 +210,7 @@
     } catch (e) {}
 
     function load() {
+      LoadingScreen.set('Запуск движка Warcraft III…');
       var s = document.createElement('script');
       s.src = 'openwarcraft3.js?v=' + window.__BUILD;
       if (!WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,5,3,1,4,1]))) {
@@ -131,8 +225,9 @@
     }
     fetch('version.json', { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) { if (j && j.build) window.__BUILD = j.build + '-mobile4'; })
+      .then(function (j) { if (j && j.build) window.__BUILD = j.build; })
       .catch(function () {})
+      .then(() => { LoadingScreen.set('Подключение игровых ресурсов…'); })
       .then(() => packId ? mountLocalArchive(packId) : fetch(dataRoot + 'paths.index.json').then(r => r.ok ? r.json() : null)
         .then(names => { if (Array.isArray(names)) Module.WC3_FILE_INDEX = new Set(names); })
         .catch(() => {}))
@@ -146,6 +241,10 @@
   window.seedMapCatalog = function () {
     var FS = (window.Module && Module.FS) || window.FS;
     if (!FS) return;
+    // The native skirmish browser enumerates the literal directory "Maps".
+    // Share the lowercase mirror's entries and decoded archives via one alias.
+    FS.mkdirTree('/data/maps');
+    if (!FS.analyzePath('/data/Maps').exists) FS.symlink('/data/maps', '/data/Maps');
     (typeof Module.WC3_MAPS === 'string' ? Promise.resolve(Module.WC3_MAPS) :
       fetch(dataRoot + 'maps.index.txt', { cache: 'no-store' }).then(r => r.ok ? r.text() : ''))
       .then(function (txt) {
