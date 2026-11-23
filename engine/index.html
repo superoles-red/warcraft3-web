@@ -43,7 +43,7 @@
       (new URLSearchParams(location.search)).get('fow') === 'off' ? { W3_FOWOFF: '1' } : {},
       (new URLSearchParams(location.search)).get('audio') === 'dummy' ? { SDL_AUDIODRIVER: 'dummy' } : {}),
     arguments: ['-data', '/data', '+com_maxfps', touchDevice ? '30' : '60',
-      '+scr_showfps', '0', '+cl_camera_edge_scroll', '0', '+fs_expansion', query.get('edition') === 'tft' ? '1' : '0'].concat(mapArgs),
+      '+scr_showfps', '0', '+vid_fullscreen', '0', '+cl_camera_edge_scroll', '0', '+fs_expansion', query.get('edition') === 'tft' ? '1' : '0'].concat(mapArgs),
     print: function (t) { if (window.__logs.length < 2000) window.__logs.push(String(t)); },
     printErr: function (t) { if (window.__errors.length < 4000) window.__errors.push(String(t)); },
     WC3_DATA_BASE: dataRoot,   // served map-mirror root, relative to this page

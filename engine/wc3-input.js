@@ -65,11 +65,20 @@
     var pinchDist = 0;
     var twoFingerTap = false;
 
-    function rel(e) {
-      var t = e.changedTouches ? e.changedTouches[0] : e;
-      return { x: t.clientX, y: t.clientY };
+    var holdTimer = 0;
+    function cancelHold() {
+      clearTimeout(holdTimer);
+      holdTimer = 0;
     }
-    function evPoint(e) { return rel(e); }
+    function beginHold(point) {
+      holdTimer = setTimeout(function () {
+        holdTimer = 0;
+        if (ids.length !== 1 || point.moved) return;
+        point.longFired = true;
+        clickAt(point.x, point.y, 2);
+        if (navigator.vibrate) navigator.vibrate(15);
+      }, LONG_MS);
+    }
 
     canvas.addEventListener('touchstart', function (e) {
       e.preventDefault();
@@ -78,6 +87,8 @@
         pts[t.identifier] = { x0: t.clientX, y0: t.clientY, x: t.clientX, y: t.clientY, t0: Date.now(), moved: false, longFired: false };
         ids.push(t.identifier);
       }
+      cancelHold();
+      if (ids.length === 1) beginHold(pts[ids[0]]);
       if (ids.length === 2) {
         twoFingerTap = true;
         var a = pts[ids[0]], b = pts[ids[1]];
@@ -93,7 +104,10 @@
         var p = pts[t.identifier];
         if (!p) continue;
         p.x = t.clientX; p.y = t.clientY;
-        if (Math.hypot(p.x - p.x0, p.y - p.y0) > MOVE_THRESHOLD) p.moved = true;
+        if (Math.hypot(p.x - p.x0, p.y - p.y0) > MOVE_THRESHOLD) {
+          p.moved = true;
+          cancelHold();
+        }
       }
       if (ids.length === 2) {
         var a = pts[ids[0]], b = pts[ids[1]];
@@ -118,6 +132,7 @@
 
     function endTouch(e) {
       e.preventDefault();
+      cancelHold();
       var finished = [];
       for (var i = 0; i < e.changedTouches.length; i++) {
         var t = e.changedTouches[i];
@@ -143,18 +158,6 @@
     canvas.addEventListener('touchend', endTouch, { passive: false });
     canvas.addEventListener('touchcancel', endTouch, { passive: false });
 
-    /* long-press = right click */
-    setInterval(function () {
-      var now = Date.now();
-      for (var k in pts) {
-        var p = pts[k];
-        if (!p.moved && !p.longFired && now - p.t0 >= LONG_MS) {
-          p.longFired = true;
-          clickAt(p.x, p.y, 2);
-          if (navigator.vibrate) navigator.vibrate(15);
-        }
-      }
-    }, 80);
     setStatus('Touch controls on — tap select · hold command · drag pan · 2-finger tap command');
   }
 
@@ -167,13 +170,23 @@
 
   function padStatus(pad) { setStatus('Controller: ' + (pad ? pad.id : '') + (pad ? ' — A select · B command · L1/R1 zoom · L2/R2 rotate · Start menu' : '')); }
 
-  window.addEventListener('gamepadconnected', function (e) { padIndex = e.gamepad.index; padStatus(e.gamepad); });
+  var framePending = false;
+  function schedulePadPoll() {
+    if (framePending) return;
+    framePending = true;
+    requestAnimationFrame(poll);
+  }
+  window.addEventListener('gamepadconnected', function (e) {
+    if (e.gamepad) { padIndex = e.gamepad.index; padStatus(e.gamepad); }
+    schedulePadPoll();
+  });
   window.addEventListener('gamepaddisconnected', function (e) { if (padIndex === e.gamepad.index) { padIndex = null; padStatus(null); } });
 
   var lastT = performance.now();
   function btn(pad, n) { var b = pad.buttons[n]; return !!(b && (b.pressed || b.value > 0.5)); }
 
   function poll(now) {
+    framePending = false;
     var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
     var pads = navigator.getGamepads ? navigator.getGamepads() : [];
     var pad = null;
@@ -208,14 +221,14 @@
       if (back && !prevButtons.back) keyEvent('F9', 'F9', true), keyEvent('F9', 'F9', false);
       prevButtons.b0 = b0; prevButtons.b1 = b1; prevButtons.l1 = l1; prevButtons.r1 = r1;
       prevButtons.l2 = l2; prevButtons.r2 = r2; prevButtons.start = start; prevButtons.back = back;
+      schedulePadPoll();
     }
-    requestAnimationFrame(poll);
   }
-  requestAnimationFrame(poll);
+  schedulePadPoll();
 
   /* ---------- fake gamepad test shim (inert unless ?fakegamepad=1) ---------- */
   if (params.get('fakegamepad') === '1') {
-    var fakeState = { id: 'Fake BT Pad (test shim)', connected: true, mapping: 'standard',
+    var fakeState = { id: 'Fake BT Pad (test shim)', index: 0, connected: true, mapping: 'standard',
       axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, function () { return { pressed: false, value: 0 }; }) };
     var fakeGamepads = function () { var a = []; a[0] = fakeState; return a; };
     try { Object.defineProperty(navigator, 'getGamepads', { value: fakeGamepads, configurable: true }); } catch (e) {}
