@@ -111,6 +111,7 @@
   const dataRoot = assetRoot + 'gamedata/';
   if (packId) packStore('readonly',store=>store.get('presentation')).then(art=>{
     if (art?.['background.webp']) LoadingScreen.art(name=>art[name] && URL.createObjectURL(art[name]));
+    if (art?.['icon-192.png']) activateInstalledManifest();
   }).catch(()=>{});
   else LoadingScreen.art(name=>'../presentation/'+name);
   const touchDevice = matchMedia('(pointer: coarse)').matches;

@@ -59,6 +59,23 @@ self.addEventListener('fetch', event => {
   if (u.origin!==rootURL.origin || !u.pathname.startsWith(rootURL.pathname)) return;
   const rel=u.pathname.slice(rootURL.pathname.length);
   const name=rel==='' ? 'index.html' : rel==='engine/' ? 'engine/index.html' : rel;
+  if (name === 'manifest.webmanifest' && u.searchParams.has('installed')) {
+    event.respondWith((async () => {
+      const manifestURL = new URL(name, rootURL);
+      const cache = await caches.open(cacheName);
+      const template = await cache.match(manifestURL) || await fetch(manifestURL);
+      const definition = await template.json();
+      const art = await packStore('readonly', store => store.get('presentation'));
+      for (const icon of definition.icons) {
+        const blob = art?.[icon.src.split('/').pop()];
+        if (blob) icon.src = await manifestIconURL(blob);
+      }
+      return new Response(JSON.stringify(definition), {headers: {
+        'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-store'
+      }});
+    })());
+    return;
+  }
   if (name.startsWith('presentation/') && event.request.method==='GET') {
     event.respondWith((async()=>{
       const art=await packStore('readonly',store=>store.get('presentation')).catch(()=>null);

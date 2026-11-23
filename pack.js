@@ -89,3 +89,30 @@ async function installedArchive(row) {
   // Blob concatenation references the on-disk blocks. No second full ZIP is stored.
   return new Blob(blocks,{type:'application/zip'});
 }
+
+// Chrome checks install icons outside the page's controlled fetch path. The
+// installed manifest carries the original PNG bytes supplied by the player.
+function activateInstalledManifest() {
+  if (!navigator.serviceWorker) return;
+  function activate() {
+    if (!navigator.serviceWorker.controller) return;
+    const link = document.querySelector('link[rel="manifest"]');
+    if (link) {
+      const url = new URL(link.href);
+      url.searchParams.set('installed', '1');
+      link.href = url.href;
+    }
+    navigator.serviceWorker.removeEventListener('controllerchange', activate);
+  }
+  if (navigator.serviceWorker.controller) activate();
+  else navigator.serviceWorker.addEventListener('controllerchange', activate);
+}
+
+async function manifestIconURL(blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  for (let pos = 0; pos < bytes.length; pos += 16384) {
+    binary += String.fromCharCode(...bytes.subarray(pos, pos + 16384));
+  }
+  return 'data:image/png;base64,' + btoa(binary);
+}

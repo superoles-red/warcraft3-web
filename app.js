@@ -27,6 +27,7 @@ const gameStore=(mode,fn)=>packStore(mode,fn);
 const read=key=>gameStore('readonly',s=>s.get(key));
 function applyArt(blobs) {
   if (blobs && blobs['background.webp']) LoadingScreen.art(name=>blobs[name] && URL.createObjectURL(blobs[name]));
+  if (blobs?.['icon-192.png']) activateInstalledManifest();
 }
 async function install(file, id, source, name, chunkKeys) {
   LoadingScreen.set('Проверяем игровые файлы…');
