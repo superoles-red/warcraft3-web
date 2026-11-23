@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Serve the browser shell and only the prepared portion of a local installation."""
 import argparse
+import errno
 import json
 import mimetypes
 import os
@@ -10,10 +11,11 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
+from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parent
-PUBLIC = {"", "index.html", "app.js", "style.css", "sw.js", "pack.js", "manifest.webmanifest", "icon.png"}
-ENGINE = {"", "index.html", "wc3-input.js", "openwarcraft3.js", "openwarcraft3.wasm",
+PUBLIC = {"", "index.html", "app.js", "style.css", "sw.js", "pack.js", "manifest.webmanifest", "icon.png", "lib/fflate-0.8.2.js"}
+ENGINE = {"", "index.html", "wc3-input.js", "pack-runtime.js", "openwarcraft3.js", "openwarcraft3.wasm",
           "openwarcraft3.data", "version.json", "LICENSE", "NOTICE.md"}
 
 class Server(ThreadingHTTPServer):
@@ -58,7 +60,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "local-status.json":
             maps = ROOT / "local/gamedata/maps.index.txt"
             ready = maps.is_file() and maps.stat().st_size > 0
-            data = json.dumps({"ready": ready}).encode()
+            data = json.dumps({"application": "warcraft3-web", "ready": ready}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Cache-Control", "no-store")
@@ -138,6 +140,14 @@ def main():
     try:
         server = Server((args.host, args.port), Handler)
     except OSError as exc:
+        if exc.errno == errno.EADDRINUSE and args.open:
+            try:
+                with urlopen(url + "local-status.json", timeout=2) as response:
+                    if json.load(response).get("application") == "warcraft3-web":
+                        webbrowser.open(url)
+                        return
+            except (OSError, ValueError):
+                pass
         parser.exit(1, f"{exc}\n{url}\n")
     server.trace, server.trace_lock, server.seen = args.trace, threading.Lock(), set()
     if args.trace:

@@ -15,6 +15,9 @@
   #movie { display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 20;
            background: #000; object-fit: contain; }
 </style>
+<script src="../pack.js"></script>
+<script src="../lib/fflate-0.8.2.js"></script>
+<script src="pack-runtime.js"></script>
 <canvas id="canvas" width="1280" height="720" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
 <div id="status">Загрузка Warcraft III…</div>
 <div hidden id="input-status"></div>
@@ -40,7 +43,7 @@
       (new URLSearchParams(location.search)).get('fow') === 'off' ? { W3_FOWOFF: '1' } : {},
       (new URLSearchParams(location.search)).get('audio') === 'dummy' ? { SDL_AUDIODRIVER: 'dummy' } : {}),
     arguments: ['-data', '/data', '+com_maxfps', touchDevice ? '30' : '60',
-      '+cl_camera_edge_scroll', '0', '+fs_expansion', query.get('edition') === 'tft' ? '1' : '0'].concat(mapArgs),
+      '+scr_showfps', '0', '+cl_camera_edge_scroll', '0', '+fs_expansion', query.get('edition') === 'tft' ? '1' : '0'].concat(mapArgs),
     print: function (t) { if (window.__logs.length < 2000) window.__logs.push(String(t)); },
     printErr: function (t) { if (window.__errors.length < 4000) window.__errors.push(String(t)); },
     WC3_DATA_BASE: dataRoot,   // served map-mirror root, relative to this page
@@ -98,6 +101,7 @@
     // as <path>.b64 sidecars; preload the index so the engine fetches exact
     // bytes for them. Missing index = plain path (older mirrors).
     try {
+      if (!packId) {
       var b = new XMLHttpRequest();
       b.open('GET', dataRoot + 'b64.index.txt?' + window.__BUILD, false);
       b.send();
@@ -108,6 +112,7 @@
           if (line) set.add(line);
         });
         Module.WC3_B64_SET = set;
+      }
       }
     } catch (e) {}
 
@@ -126,12 +131,12 @@
     }
     fetch('version.json', { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) { if (j && j.build) window.__BUILD = j.build + '-mobile3'; })
+      .then(function (j) { if (j && j.build) window.__BUILD = j.build + '-mobile4'; })
       .catch(function () {})
-      .then(() => fetch(dataRoot + 'paths.index.json').then(r => r.ok ? r.json() : null)
+      .then(() => packId ? mountLocalArchive(packId) : fetch(dataRoot + 'paths.index.json').then(r => r.ok ? r.json() : null)
         .then(names => { if (Array.isArray(names)) Module.WC3_FILE_INDEX = new Set(names); })
         .catch(() => {}))
-      .then(load);
+      .then(load).catch(err => setStatus(err.message));
   })();
 
   // Seed the full map catalog as zero-byte placeholders so the in-game map
@@ -141,8 +146,8 @@
   window.seedMapCatalog = function () {
     var FS = (window.Module && Module.FS) || window.FS;
     if (!FS) return;
-    fetch(dataRoot + 'maps.index.txt', { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.text() : ''; })
+    (typeof Module.WC3_MAPS === 'string' ? Promise.resolve(Module.WC3_MAPS) :
+      fetch(dataRoot + 'maps.index.txt', { cache: 'no-store' }).then(r => r.ok ? r.text() : ''))
       .then(function (txt) {
         var n = 0;
         var h = 0;
@@ -155,7 +160,7 @@
           try {
             var dir = p.replace(/\/[^\/]*$/, '');
             if (dir && dir !== p) FS.mkdirTree(dir);
-            FS.writeFile(p, new Uint8Array(0));
+            if (!FS.analyzePath(p).exists) FS.writeFile(p, new Uint8Array(0));
             n++;
           } catch (e) {}
         });
