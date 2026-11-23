@@ -1,0 +1,12 @@
+/local/
+/viewer/local/
+/evidence/
+/output/
+*.w3x
+*.w3m
+*.mpq
+*.zip
+*.webm
+*.avi
+.DS_Store
+__pycache__/

@@ -1,0 +1,36 @@
+{
+  "installer": {
+    "setup.exe": 1157284,
+    "setup-1.bin": 1071535616,
+    "setup-2.bin": 1072693248,
+    "setup-3.bin": 327954341
+  },
+  "installer_bytes": 2473340489,
+  "expanded_bytes": {
+    "CASC_indices_and_config": 12766366,
+    "CASC_payload": 1931294186,
+    "movie_video": 353589558,
+    "Windows_client_and_editor": 133420400,
+    "loose_files_demos_and_docs": 22366651,
+    "movie_sound_all_variants": 91765998
+  },
+  "expanded_all_variants_bytes": 2545203159,
+  "casclib_named_paths": 65132,
+  "casclib_local_paths": 22705,
+  "selected_locale": "ruru",
+  "selected_paths": 16899,
+  "selected_bytes": 1706911845,
+  "unique_casc_objects": 16262,
+  "selected_unique_bytes": {
+    "models": 119802579,
+    "textures": 194737959,
+    "wav": 972413950,
+    "other": 33737198,
+    "campaign": 28236162,
+    "melee_and_other_maps": 52795801,
+    "dialogue_mp3": 176461786,
+    "music_mp3": 100369122,
+    "other_mp3": 1145208
+  },
+  "selected_total_unique_bytes": 1679699765
+}

@@ -1,0 +1,31 @@
+name: Publish web shell
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Stage only the browser runtime
+        run: |
+          mkdir -p site/engine
+          cp index.html app.js pack.js sw.js local-status.json .nojekyll site/
+          cp engine/index.html engine/openwarcraft3.js engine/openwarcraft3.wasm engine/openwarcraft3.data engine/wc3-input.js engine/version.json engine/LICENSE engine/LICENSE-OpenRealm engine/NOTICE.md site/engine/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
